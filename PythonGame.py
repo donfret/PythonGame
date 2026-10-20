@@ -2,6 +2,7 @@ import sys
 
 # ==============================================================================
 # глобальные коллекции данных по уровням (кортежи и словари)
+# ==============================================================================
 # базовые настройки уровней: номер, название и сложность
 LEVEL_CONFIGS = (
     (1, "Главный холл участка R.P.D.", "Низкий"),
@@ -41,7 +42,7 @@ CRAFT_RECIPES = {
 # ==========================================================================================
 # состояние игрока и инвентарь (будет меняться по ходу игры)
 player = {"name": "", "hp": 100, "max_hp": 100, "level": 1, "infected": False}
-inventory = ["пистолет", "зеленая трава"]  # начальный инвентарь
+inventory = ["пистолет", "зеленая трава"]  # начальный инвентарь (обычный список)
 
 unlocked_doors = set()  # сюда закидывается пройденное (двери, загадки, враги)
 solved_puzzles = set()  # чтобы не повторять одну и ту же загадку дважды
@@ -69,6 +70,7 @@ tyrant_alive = True  # в конце надо фолс, это босс
 
 # ==============================================================================
 # старт игры и ввод имени
+# ==============================================================================
 print("\n" + "=" * 68)  # в начале отступ для красоты
 print("   RESIDENT EVIL: RACCOON CITY ESCAPE (ТЕКСТОВАЯ НОВЕЛЛА)   ")
 print("=" * 68)  # мне лень самому печатать
@@ -86,6 +88,7 @@ print("Подсказка: в любой момент вводите 'дейст
 
 # ==============================================================================
 # главный игровой цикл
+# ==============================================================================
 game_active = True
 level_announced = 0  # переменная чтобы шапка уровня выводилась только один раз при входе
 
@@ -101,7 +104,7 @@ while game_active and player["hp"] > 0:
         print(f"УРОВЕНЬ {cfg[0]}: {cfg[1]} | Угроза: {cfg[2]}")
         print("=" * 68)
 
-        # свич-кейс для вывода сюжетной шапки в зависимости от уровня
+        # матч кейс проверяет номер уровня и выводит нужную сюжетную вводную
         match current_lvl:
             case 1:
                 print("СЮЖЕТ: Вы заперты в холле R.P.D. Соберите 3 медали в статую Богини.")
@@ -122,9 +125,11 @@ while game_active and player["hp"] > 0:
     verb = parts[0]
     arg = parts[1].strip() if len(parts) > 1 else ""
 
-    # =====================================================================
+    # ================================================================================
     # блок общих команд (работают всегда на всех уровнях)
     command_handled = True
+
+    # матч кейс проверяет первое слово (verb) и выбирает общую команду
     match verb:
         case "помощь":
             print("\n--- ОБЩИЕ КОМАНДЫ ---")
@@ -133,6 +138,7 @@ while game_active and player["hp"] > 0:
         case "статус":
             cfg = LEVEL_CONFIGS[current_lvl - 1]
             inf = "ЗАРАЖЕН" if player["infected"] else "Здоров"
+            # .join() склеивает элементы списка inventory через запятую в одну строку
             inv = ", ".join(inventory) if inventory else "Пусто"
             print(f"\nЛОКАЦИЯ: {cfg[1]} | HP: {player['hp']} | Статус: {inf} | Инвентарь: {inv}")
         case "действия" | "д":
@@ -150,12 +156,13 @@ while game_active and player["hp"] > 0:
             elif current_lvl == 4:
                 print("Финал: терминал, бой с тираном, эвакуация")
         case "лечиться":
+            # if elif else проверяет, какое лечебное средство есть в инвентаре
             if "аптечка" in inventory:
-                inventory.remove("аптечка")
+                inventory.remove("аптечка")  # .remove() удаляет конкретный элемент из списка инвентаря
                 player["hp"] = player["max_hp"]  # полное хп
                 print(">> Здоровье полностью восстановлено (100 HP)!")
             elif "зеленая трава" in inventory:
-                inventory.remove("зеленая трава")
+                inventory.remove("зеленая трава")  # удаляем траву из списка inventory
                 player["hp"] = min(player["max_hp"], player["hp"] + 35)  # лечимся не выше максимума
                 print(f">> Здоровье: {player['hp']} HP.")
             else:
@@ -171,9 +178,9 @@ while game_active and player["hp"] > 0:
                 key = tuple(sorted([i1, i2]))
                 if key in CRAFT_RECIPES:
                     res = CRAFT_RECIPES[key]
-                    inventory.remove(i1)
-                    inventory.remove(i2)
-                    inventory.append(res)
+                    inventory.remove(i1)  # удаляем первый старый компонент из инвентаря
+                    inventory.remove(i2)  # удаляем второй старый компонент из инвентаря
+                    inventory.append(res)  # .append() добавляет готовый скрафченный предмет в конец списка инвентаря
                     print(f">> Успех! Получено: '{res}'.")
                 else:
                     print(">> Эти предметы нельзя объединить.")
@@ -184,8 +191,8 @@ while game_active and player["hp"] > 0:
             if arg == "ракетница" and current_lvl == 4 and player["infected"]:
                 print(">> Ошибка: сначала вылечитесь в терминале от заражения!")
             elif arg in room_items:
-                room_items.remove(arg)  # убираем с пола
-                inventory.append(arg)  # кидаем в рюкзак
+                room_items.remove(arg)  # .remove() убирает подобранный предмет из списка комнаты level_items
+                inventory.append(arg)  # .append() добавляет этот же предмет в конец списка inventory
                 print(f">> '{arg}' добавлен в инвентарь.")
             else:
                 print(f">> Предмета '{arg}' здесь нет.")
@@ -193,14 +200,17 @@ while game_active and player["hp"] > 0:
             print(">> Выход из игры...")
             game_active = False
         case _:
+            # если глагол не найден в общих командах, опускаем флаг и идем в блок сюжетных иф элсов уровня
             command_handled = False  # если глагола нет в командах, флаг падает и идем в сюжетные команды
 
-    # --------------------------------------------------------------------------
+    # ==================================================================================
     # блок сюжетных команд уровней (общая команда не подошла)
     if not command_handled and game_active:
+        # этот матч кейс определяет, к какому уровню привязан сюжетный выбор игрока
         match current_lvl:
             # уровень 1
             case 1:
+                # здесь цепочка иф элсов проверяет текстовую команду (cmd) для 1 уровня
                 if cmd == "осмотреть":
                     print(f"\nПредметы: {', '.join(room_items) if room_items else 'пусто'}")
                     print("Объекты: памятка офицера, стол, сейф, статуя Богини.")
@@ -209,7 +219,7 @@ while game_active and player["hp"] > 0:
                 elif cmd == "обыскать стол":
                     if "стол" not in solved_puzzles:
                         print(">> Найдена 'медаль девы'. Возьмите ее.")
-                        room_items.append("медаль девы")
+                        room_items.append("медаль девы")  # .append() добавляет медаль в список предметов комнаты
                         solved_puzzles.add("стол")
                     else:
                         print(">> Стол пуст.")
@@ -218,20 +228,23 @@ while game_active and player["hp"] > 0:
                         print(">> Сейф уже открыт.")
                     elif input("Код: ").strip() == SECURITY_CODES["сейф"]:
                         print(">> Получены 'медаль единорога' и 'зажигалка'.")
+                        # .extend() добавляет сразу несколько элементов (список) в конец инвентаря
                         inventory.extend(["медаль единорога", "зажигалка"])
                         solved_puzzles.add("сейф")
                     else:
                         player["hp"] -= 15  # отнимает хп за неправильный пароль
                         print(f">> Неверно! Удар током (-15 HP). Осталось: {player['hp']}.")
                 elif cmd == "вставить медали":
+                    # .intersection() ищет пересечение множеств: какие медали из required_medals есть в inventory
                     found = set(inventory).intersection(required_medals)
                     if not found:
                         print(">> Нет медалей в инвентаре.")
                     else:
                         for m in found:
-                            inventory.remove(m)
+                            inventory.remove(m)  # удаляем вставленную медаль из инвентаря через .remove()
                             inserted_medals.add(m)
                             print(f">> Вставлена '{m}'.")
+                        # .issubset() проверяет являются ли все нужные медали подмножеством вставленных (собраны ли все 3)
                         if required_medals.issubset(inserted_medals):
                             print(">> Проход открыт! Введите 'идти дальше'.")
                             unlocked_doors.add("проход_1")
@@ -245,6 +258,7 @@ while game_active and player["hp"] > 0:
 
             # уровень 2
             case 2:
+                # ветвление if elif else для команд 2 уровня
                 if cmd == "осмотреть":
                     print(f"\nПредметы: {', '.join(room_items) if room_items else 'пусто'}")
                     print(f"Враги: {', '.join(enemies_lvl2) if enemies_lvl2 else 'нет'}")
@@ -255,16 +269,17 @@ while game_active and player["hp"] > 0:
                         print(">> Шкафчик пуст.")
                     elif input("Код: ").strip().upper() == SECURITY_CODES["шкафчик"]:
                         print(">> Получены 'дробовик' и 'болторез'.")
-                        inventory.extend(["дробовик", "болторез"])
+                        inventory.extend(["дробовик", "болторез"])  # .extend() добавляет пачку предметов в рюкзак
                         solved_puzzles.add("шкафчик")
                     else:
                         print(">> Неверный код.")
                 elif cmd == "атаковать":
                     if not enemies_lvl2:
                         print(">> Никого нет.")
-                    elif enemies_lvl2.pop(0) == "зомби-полицейский":  # выкидываем первого врага из очереди
+                    elif enemies_lvl2.pop(
+                            0) == "зомби-полицейский":  # .pop(0) удаляет и возвращает самый первый элемент из списка врагов
                         if "пистолет" in inventory and "патроны" in inventory:
-                            inventory.remove("патроны")
+                            inventory.remove("патроны")  # тратим патроны через .remove()
                             print(">> Зомби застрелен из пистолета.")
                         else:
                             player["hp"] -= 30
@@ -297,6 +312,7 @@ while game_active and player["hp"] > 0:
 
             # уровень 3
             case 3:
+                # цепочка иф элсов для логики 3 уровня с трубами и вентилем
                 if cmd == "осмотреть":
                     print(f"\nПредметы: {', '.join(room_items) if room_items else 'пусто'}")
                 elif cmd == "читать записку":
@@ -306,7 +322,7 @@ while game_active and player["hp"] > 0:
                         print(">> Цепь уже срезана.")
                     elif "болторез" in inventory:
                         print(">> Получены 'вентиль' и 'красная колба'.")
-                        inventory.extend(["вентиль", "красная колба"])
+                        inventory.extend(["вентиль", "красная колба"])  # .extend() добавляет сразу два предмета
                         solved_puzzles.add("цепь")
                     else:
                         print(">> Нужен болторез.")
@@ -314,12 +330,15 @@ while game_active and player["hp"] > 0:
                     if "вентиль" not in inventory:
                         print(">> Нет вентиля.")
                     else:
-                        for p, on in valves_lvl3.items(): print(f"  * {p}: {'ПАР' : <5} if on else 'ВЫКЛ'")
+                        for p, on in valves_lvl3.items():
+                            print(f"  * {p}: {'ПАР' : <5} if on else 'ВЫКЛ'")
                         tp = input("Труба: ").strip().lower()
                         if tp in valves_lvl3:
                             valves_lvl3[tp] = not valves_lvl3[tp]  # меняем значения с тру на фолс
                             print(f">> Труба '{tp}' переключена.")
-                            if not any(valves_lvl3.values()):  # проверяем что все трубы фолс
+                            # .any() проверяет есть ли хоть одно значение True среди всех труб в словаре
+                            if not any(
+                                    valves_lvl3.values()):  # если все трубы фолс то условие срабатывает
                                 print(">> Пар перекрыт!")
                                 solved_puzzles.add("пар")
                         else:
@@ -343,14 +362,16 @@ while game_active and player["hp"] > 0:
 
             # уровень 4
             case 4:
+                # финальная ветка иф элсов для победы над боссом
                 if cmd == "осмотреть":
                     print(f"\nПредметы: {', '.join(room_items) if room_items else 'пусто'}")
                 elif cmd == "терминал":
                     if not player["infected"]:
                         print(">> Вы уже здоровы.")
+                    # .all() проверяет, верны ли абсолютно все ответы игрока на вопросы из викторины quiz_lvl4
                     elif all(input(f"Q: {q}\nA: ").strip().lower() == a for q, a in quiz_lvl4.items()):
                         player["infected"] = False
-                        inventory.append("вакцина")
+                        inventory.append("вакцина")  # .append() добавляет вакцину в инвентарь
                         solved_puzzles.add("вакцина")
                         print(">> Вакцина принята! Заражение снято.")
                     else:
@@ -360,7 +381,7 @@ while game_active and player["hp"] > 0:
                     if not tyrant_alive:
                         print(">> Тиран уже мертв.")
                     elif "ракетница" in inventory:
-                        inventory.remove("ракетница")
+                        inventory.remove("ракетница")  # .remove() расходует ракетницу из инвентаря
                         tyrant_alive = False  # убили босса, становится фолс
                         defeated_enemies.add("тиран т-103")
                         print(">> Ракетница уничтожает Тирана!")
